@@ -222,9 +222,8 @@ if [ "$USE_VCPKG" = true ]; then
     cat > "$TARGET_DIR/.vscode/settings.json" <<'EOF'
 {
     "cmake.useCMakePresets": "always",
-    "cmake.configurePreset": "debug",
-    "cmake.buildPreset": "debug",
     "cmake.configureOnOpen": true,
+    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
 
     "clangd.path": "/usr/bin/clangd",
 
@@ -233,8 +232,7 @@ if [ "$USE_VCPKG" = true ]; then
         "--clang-tidy",
         "--completion-style=detailed",
         "--header-insertion=iwyu",
-        "--pch-storage=memory",
-        "--compile-commands-dir=${workspaceFolder}/build/debug"
+        "--pch-storage=memory"
     ],
 
     "C_Cpp.intelliSenseEngine": "disabled",
@@ -264,6 +262,7 @@ else
 
     "cmake.buildDirectory": "${workspaceFolder}/build",
     "cmake.configureOnOpen": true,
+    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
 
     "clangd.path": "/usr/bin/clangd",
 
@@ -272,8 +271,7 @@ else
         "--clang-tidy",
         "--completion-style=detailed",
         "--header-insertion=iwyu",
-        "--pch-storage=memory",
-        "--compile-commands-dir=${workspaceFolder}/build"
+        "--pch-storage=memory"
     ],
 
     "C_Cpp.intelliSenseEngine": "disabled",
@@ -295,98 +293,46 @@ fi
 # 8. .vscode/tasks.json
 # ==========================================
 
-if [ "$USE_VCPKG" = true ]; then
-    cat > "$TARGET_DIR/.vscode/tasks.json" <<'EOF'
+cat > "$TARGET_DIR/.vscode/tasks.json" <<'EOF'
 {
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build project",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "--build",
-                "--preset",
-                "debug"
-            ],
+            "type": "cmake",
+            "label": "CMake: build",
+            "command": "build",
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
-            "problemMatcher": [
-                "$gcc"
-            ]
+            "problemMatcher": [],
+            "detail": "Build using the active CMake Tools configuration"
         }
     ]
 }
 EOF
-else
-    cat > "$TARGET_DIR/.vscode/tasks.json" <<'EOF'
-{
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Build project",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "--build",
-                "${workspaceFolder}/build"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        }
-    ]
-}
-EOF
-fi
 
 # ==========================================
 # 9. .vscode/launch.json
 # ==========================================
 
-if [ "$USE_VCPKG" = true ]; then
-    cat > "$TARGET_DIR/.vscode/launch.json" <<'EOF'
+cat > "$TARGET_DIR/.vscode/launch.json" <<'EOF'
 {
     "version": "0.2.0",
     "configurations": [
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug C++ with CodeLLDB",
-            "program": "${workspaceFolder}/build/debug/${workspaceFolderBasename}",
+            "name": "Debug CMake Target",
+            "program": "${command:cmake.launchTargetPath}",
             "args": [],
             "cwd": "${workspaceFolder}",
-            "preLaunchTask": "Build project",
+            "preLaunchTask": "CMake: build",
             "terminal": "integrated"
         }
     ]
 }
 EOF
-else
-    cat > "$TARGET_DIR/.vscode/launch.json" <<'EOF'
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug C++ with CodeLLDB",
-            "program": "${workspaceFolder}/build/${workspaceFolderBasename}",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "preLaunchTask": "Build project",
-            "terminal": "integrated"
-        }
-    ]
-}
-EOF
-fi
 
 # ==========================================
 # 10. .clang-format
@@ -439,7 +385,6 @@ EOF
 cat > "$TARGET_DIR/.gitignore" <<'EOF'
 build/
 .cache/
-compile_commands.json
 .vscode/.cmake/
 EOF
 
