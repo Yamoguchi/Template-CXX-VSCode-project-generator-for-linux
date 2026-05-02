@@ -2,15 +2,43 @@
 
 set -e
 
-PROJECT_NAME="$1"
+PROJECT_NAME=""
+USE_VCPKG=false
 
 # ==========================================
-# 0. CHECKS
+# 0. ARGUMENTS
+# ==========================================
+
+for arg in "$@"; do
+    case "$arg" in
+        --vcpkg)
+            USE_VCPKG=true
+            ;;
+        -h|--help)
+            echo "Usage:"
+            echo "  newcpp ProjectName"
+            echo "  newcpp ProjectName --vcpkg"
+            exit 0
+            ;;
+        *)
+            if [ -z "$PROJECT_NAME" ]; then
+                PROJECT_NAME="$arg"
+            else
+                echo "❌ Error: unknown argument '$arg'."
+                echo "Usage: newcpp ProjectName [--vcpkg]"
+                exit 1
+            fi
+            ;;
+    esac
+done
+
+# ==========================================
+# 1. CHECKS
 # ==========================================
 
 if [ -z "$PROJECT_NAME" ]; then
     echo "❌ Error: please provide a project name."
-    echo "Usage: newcpp ProjectName"
+    echo "Usage: newcpp ProjectName [--vcpkg]"
     exit 1
 fi
 
@@ -39,6 +67,22 @@ if ! command -v clang++ >/dev/null 2>&1; then
     exit 1
 fi
 
+if [ "$USE_VCPKG" = true ]; then
+    if [ -z "$VCPKG_ROOT" ]; then
+        echo "❌ Error: VCPKG_ROOT is not set."
+        echo "Set it, for example:"
+        echo "  export VCPKG_ROOT=\$HOME/dev/vcpkg"
+        exit 1
+    fi
+
+    if [ ! -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]; then
+        echo "❌ Error: vcpkg toolchain file was not found."
+        echo "Expected:"
+        echo "  $VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+        exit 1
+    fi
+fi
+
 if ! command -v code >/dev/null 2>&1; then
     echo "⚠️  Warning: 'code' command was not found."
     echo "The project will be created, but VS Code will not open automatically."
@@ -49,15 +93,19 @@ fi
 
 echo "📁 Creating project '$PROJECT_NAME'..."
 
+if [ "$USE_VCPKG" = true ]; then
+    echo "📦 vcpkg support enabled."
+fi
+
 # ==========================================
-# 1. CREATE PROJECT STRUCTURE
+# 2. CREATE PROJECT STRUCTURE
 # ==========================================
 
 mkdir -p "$TARGET_DIR/.vscode"
 mkdir -p "$TARGET_DIR/src"
 
 # ==========================================
-# 2. CMakeLists.txt
+# 3. CMakeLists.txt
 # ==========================================
 
 cat > "$TARGET_DIR/CMakeLists.txt" <<EOF
@@ -85,7 +133,7 @@ target_compile_options($PROJECT_NAME PRIVATE
 EOF
 
 # ==========================================
-# 3. src/main.cpp
+# 4. src/main.cpp
 # ==========================================
 
 cat > "$TARGET_DIR/src/main.cpp" <<'EOF'
@@ -98,10 +146,109 @@ int main() {
 EOF
 
 # ==========================================
-# 4. .vscode/settings.json
+# 5. CMakePresets.json
 # ==========================================
 
-cat > "$TARGET_DIR/.vscode/settings.json" <<'EOF'
+if [ "$USE_VCPKG" = true ]; then
+    cat > "$TARGET_DIR/CMakePresets.json" <<'EOF'
+{
+    "version": 6,
+    "configurePresets": [
+        {
+            "name": "debug",
+            "displayName": "Debug",
+            "description": "Debug build using Ninja, Clang and vcpkg",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        },
+        {
+            "name": "release",
+            "displayName": "Release",
+            "description": "Release build using Ninja, Clang and vcpkg",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "clang",
+                "CMAKE_CXX_COMPILER": "clang++",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "debug",
+            "configurePreset": "debug"
+        },
+        {
+            "name": "release",
+            "configurePreset": "release"
+        }
+    ]
+}
+EOF
+fi
+
+# ==========================================
+# 6. vcpkg.json
+# ==========================================
+
+if [ "$USE_VCPKG" = true ]; then
+    cat > "$TARGET_DIR/vcpkg.json" <<EOF
+{
+    "name": "$PROJECT_NAME",
+    "version-string": "0.1.0",
+    "dependencies": []
+}
+EOF
+fi
+
+# ==========================================
+# 7. .vscode/settings.json
+# ==========================================
+
+if [ "$USE_VCPKG" = true ]; then
+    cat > "$TARGET_DIR/.vscode/settings.json" <<'EOF'
+{
+    "cmake.useCMakePresets": "always",
+    "cmake.configurePreset": "debug",
+    "cmake.buildPreset": "debug",
+    "cmake.configureOnOpen": true,
+
+    "clangd.path": "/usr/bin/clangd",
+
+    "clangd.arguments": [
+        "--background-index",
+        "--clang-tidy",
+        "--completion-style=detailed",
+        "--header-insertion=iwyu",
+        "--pch-storage=memory",
+        "--compile-commands-dir=${workspaceFolder}/build/debug"
+    ],
+
+    "C_Cpp.intelliSenseEngine": "disabled",
+
+    "editor.formatOnSave": true,
+
+    "[cpp]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    },
+
+    "[c]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
+    }
+}
+EOF
+else
+    cat > "$TARGET_DIR/.vscode/settings.json" <<'EOF'
 {
     "cmake.generator": "Ninja",
 
@@ -139,12 +286,39 @@ cat > "$TARGET_DIR/.vscode/settings.json" <<'EOF'
     }
 }
 EOF
+fi
 
 # ==========================================
-# 5. .vscode/tasks.json
+# 8. .vscode/tasks.json
 # ==========================================
 
-cat > "$TARGET_DIR/.vscode/tasks.json" <<'EOF'
+if [ "$USE_VCPKG" = true ]; then
+    cat > "$TARGET_DIR/.vscode/tasks.json" <<'EOF'
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build project",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "--preset",
+                "debug"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": [
+                "$gcc"
+            ]
+        }
+    ]
+}
+EOF
+else
+    cat > "$TARGET_DIR/.vscode/tasks.json" <<'EOF'
 {
     "version": "2.0.0",
     "tasks": [
@@ -167,12 +341,32 @@ cat > "$TARGET_DIR/.vscode/tasks.json" <<'EOF'
     ]
 }
 EOF
+fi
 
 # ==========================================
-# 6. .vscode/launch.json
+# 9. .vscode/launch.json
 # ==========================================
 
-cat > "$TARGET_DIR/.vscode/launch.json" <<'EOF'
+if [ "$USE_VCPKG" = true ]; then
+    cat > "$TARGET_DIR/.vscode/launch.json" <<'EOF'
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "lldb",
+            "request": "launch",
+            "name": "Debug C++ with CodeLLDB",
+            "program": "${workspaceFolder}/build/debug/${workspaceFolderBasename}",
+            "args": [],
+            "cwd": "${workspaceFolder}",
+            "preLaunchTask": "Build project",
+            "terminal": "integrated"
+        }
+    ]
+}
+EOF
+else
+    cat > "$TARGET_DIR/.vscode/launch.json" <<'EOF'
 {
     "version": "0.2.0",
     "configurations": [
@@ -189,9 +383,10 @@ cat > "$TARGET_DIR/.vscode/launch.json" <<'EOF'
     ]
 }
 EOF
+fi
 
 # ==========================================
-# 7. .clang-format
+# 10. .clang-format
 # ==========================================
 
 cat > "$TARGET_DIR/.clang-format" <<'EOF'
@@ -210,7 +405,7 @@ SortIncludes: true
 EOF
 
 # ==========================================
-# 8. .clang-tidy
+# 11. .clang-tidy
 # ==========================================
 
 cat > "$TARGET_DIR/.clang-tidy" <<'EOF'
@@ -221,6 +416,7 @@ Checks: >
   modernize-*,
   performance-*,
   readability-*,
+  -modernize-use-trailing-return-type,
   -cppcoreguidelines-avoid-magic-numbers,
   -readability-magic-numbers,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
@@ -234,7 +430,7 @@ FormatStyle: file
 EOF
 
 # ==========================================
-# 9. .gitignore
+# 12. .gitignore
 # ==========================================
 
 cat > "$TARGET_DIR/.gitignore" <<'EOF'
@@ -242,51 +438,6 @@ build/
 .cache/
 compile_commands.json
 .vscode/.cmake/
-EOF
-
-# ==========================================
-# 10. README.md
-# ==========================================
-
-cat > "$TARGET_DIR/README.md" <<EOF
-# $PROJECT_NAME
-
-C++ project generated for Linux using:
-
-- clang
-- clangd
-- clang-tidy
-- clang-format
-- CMake
-- Ninja
-- VS Code
-- CodeLLDB
-
-## Build
-
-\`\`\`bash
-cmake -S . -B build -G Ninja \\
-  -DCMAKE_C_COMPILER=clang \\
-  -DCMAKE_CXX_COMPILER=clang++ \\
-  -DCMAKE_BUILD_TYPE=Debug \\
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-
-cmake --build build
-\`\`\`
-
-## Run
-
-\`\`\`bash
-./build/$PROJECT_NAME
-\`\`\`
-
-## Debug
-
-Use the following VS Code debug configuration:
-
-\`\`\`text
-Debug C++ with CodeLLDB
-\`\`\`
 EOF
 
 echo "✅ Project created successfully!"
