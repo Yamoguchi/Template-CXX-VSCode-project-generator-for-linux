@@ -1,9 +1,10 @@
-# VS Code C++ Project Generator for Linux
+# VS Code C++ Project Generator
 
-A simple Bash-based scaffolder for creating ready-to-use C++ projects for Visual Studio Code on Linux.
+A simple Bash script for generating ready-to-use C++ projects on Linux.
 
-It generates a C++ project configured for:
+The generated project is configured for:
 
+- C++23
 - Clang
 - clangd
 - clang-tidy
@@ -12,416 +13,153 @@ It generates a C++ project configured for:
 - Ninja
 - VS Code
 - CodeLLDB
+- Optional vcpkg support
 
-The goal is to create a complete C++ project with one terminal command, without manually copying folders, writing CMake files, or creating VS Code configuration files every time.
+The script is intended for Linux development, especially Arch Linux, but it can also work on other distributions if the required tools are installed.
 
 ---
 
 ## Features
 
-- Generates a complete C++ project structure.
-- Creates `CMakeLists.txt` automatically.
-- Creates VS Code configuration files:
-  - `.vscode/settings.json`
-  - `.vscode/tasks.json`
-  - `.vscode/launch.json`
-- Uses Clang as the default C and C++ compiler.
-- Uses Ninja as the CMake generator.
-- Enables `compile_commands.json` generation for clangd.
-- Enables clangd background indexing.
-- Enables clang-tidy diagnostics through clangd.
-- Adds `.clang-format` for automatic formatting.
-- Adds `.clang-tidy` for static analysis rules.
-- Adds `.gitignore`.
-- Adds a basic `README.md` to the generated project.
-- Opens the created project in VS Code automatically if the `code` command is available.
+- Generates a clean C++ project structure
+- Creates a basic `src/main.cpp`
+- Creates a ready-to-use `CMakeLists.txt`
+- Configures VS Code for CMake Tools and clangd
+- Adds build and debug tasks for VS Code
+- Adds `.clang-format`
+- Adds `.clang-tidy`
+- Adds `.gitignore`
+- Supports optional vcpkg manifest mode with `--vcpkg`
+- Does not add any default third-party dependencies
+
+---
+
+## Generated project structure
+
+Without vcpkg:
+
+```text
+MyProject/
+├── .vscode/
+│   ├── launch.json
+│   ├── settings.json
+│   └── tasks.json
+├── src/
+│   └── main.cpp
+├── .clang-format
+├── .clang-tidy
+├── .gitignore
+└── CMakeLists.txt
+```
+
+With vcpkg:
+
+```text
+MyProject/
+├── .vscode/
+│   ├── launch.json
+│   ├── settings.json
+│   └── tasks.json
+├── src/
+│   └── main.cpp
+├── .clang-format
+├── .clang-tidy
+├── .gitignore
+├── CMakeLists.txt
+├── CMakePresets.json
+└── vcpkg.json
+```
 
 ---
 
 ## Requirements
 
-Before using the script, install the required system packages.
+Install the required packages.
 
-### Arch Linux
-
-```bash
-sudo pacman -S clang cmake ninja lldb git
-```
-
-Required tools:
-
-- `clang`
-- `clang++`
-- `clangd`
-- `clang-tidy`
-- `clang-format`
-- `cmake`
-- `ninja`
-- `lldb`
-- `git`
-- `code`
-
-On Arch Linux, `clangd`, `clang-tidy`, and `clang-format` are provided by the `clang` package.
-
----
-
-## VS Code Extensions
-
-Install the recommended VS Code extensions:
+On Arch Linux:
 
 ```bash
-code --install-extension llvm-vs-code-extensions.vscode-clangd
-code --install-extension ms-vscode.cmake-tools
-code --install-extension vadimcn.vscode-lldb
+sudo pacman -S cmake ninja clang lldb
 ```
 
-Recommended extensions:
+You also need VS Code or a compatible build of it.
 
-- [clangd](https://marketplace.visualstudio.com/items?itemName=llvm-vs-code-extensions.vscode-clangd)
-- [CMake Tools](https://marketplace.visualstudio.com/items?itemName=ms-vscode.cmake-tools)
-- [CodeLLDB](https://marketplace.visualstudio.com/items?itemName=vadimcn.vscode-lldb)
+Recommended VS Code extensions:
 
-If you have the Microsoft C/C++ extension installed, it is recommended to disable its IntelliSense engine when using clangd:
+- CMake Tools
+- clangd
+- CodeLLDB
 
-```json
-"C_Cpp.intelliSenseEngine": "disabled"
-```
-
-The generated project already includes this setting.
+The Microsoft C/C++ extension is not required because IntelliSense is disabled in favor of clangd.
 
 ---
 
 ## Installation
 
-The Bash script is included in the root of this repository and is named:
+Clone this repository or copy the script manually.
 
-```text
-newcpp
+Make the script executable:
+
+```bash
+chmod +x newcpp
 ```
 
-To install it as a global command, copy it to your local scripts directory.
-
-Create the local scripts directory if it does not exist:
+Move it to a directory from your `PATH`, for example:
 
 ```bash
 mkdir -p ~/.local/bin
+mv newcpp ~/.local/bin/newcpp
 ```
 
-Copy the script from the repository root:
+Make sure `~/.local/bin` is in your `PATH`.
+
+For Bash or Zsh:
 
 ```bash
-cp newcpp ~/.local/bin/newcpp
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
-Make it executable:
-
-```bash
-chmod +x ~/.local/bin/newcpp
-```
-
-Make sure `~/.local/bin` is included in your `PATH`.
-
-Check your current `PATH`:
-
-```bash
-echo $PATH
-```
-
-If `~/.local/bin` is missing, add it.
-
-### Bash
-
-```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-source ~/.bashrc
-```
-
-### Zsh
-
-```bash
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-### Fish
+For Fish:
 
 ```fish
 fish_add_path ~/.local/bin
 ```
 
-After this, the `newcpp` command should be available globally from any terminal.
-
-Check it with:
+Now you can use the script from anywhere:
 
 ```bash
-which newcpp
+newcpp MyProject
 ```
 
 ---
 
 ## Usage
 
-Open a terminal in the directory where you want to create a new C++ project.
-
-Run:
+Create a regular C++ project:
 
 ```bash
 newcpp MyProject
 ```
 
-This creates a new folder:
-
-```text
-MyProject/
-```
-
-Then the script automatically opens the project in VS Code if the `code` command is available.
-
----
-
-## Generated Project Structure
-
-The generated project looks like this:
-
-```text
-MyProject/
-├── CMakeLists.txt
-├── README.md
-├── .clang-format
-├── .clang-tidy
-├── .gitignore
-├── .vscode/
-│   ├── settings.json
-│   ├── tasks.json
-│   └── launch.json
-└── src/
-    └── main.cpp
-```
-
----
-
-## Generated Files
-
-### `CMakeLists.txt`
-
-The generated `CMakeLists.txt` configures the project to use modern C++:
-
-```cmake
-cmake_minimum_required(VERSION 3.20)
-
-project(MyProject LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-add_executable(MyProject
-    src/main.cpp
-)
-
-target_compile_options(MyProject PRIVATE
-    -Wall
-    -Wextra
-    -Wpedantic
-    -Wconversion
-    -Wshadow
-)
-```
-
----
-
-### `src/main.cpp`
-
-The default source file contains a simple Hello World program:
-
-```cpp
-#include <iostream>
-
-int main() {
-    std::cout << "Hello, World!" << '\n';
-    return 0;
-}
-```
-
----
-
-### `.vscode/settings.json`
-
-The generated VS Code settings configure CMake and clangd:
-
-```json
-{
-    "cmake.generator": "Ninja",
-
-    "cmake.configureSettings": {
-        "CMAKE_C_COMPILER": "clang",
-        "CMAKE_CXX_COMPILER": "clang++",
-        "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-    },
-
-    "cmake.buildDirectory": "${workspaceFolder}/build",
-    "cmake.configureOnOpen": true,
-
-    "clangd.path": "/usr/bin/clangd",
-
-    "clangd.arguments": [
-        "--background-index",
-        "--clang-tidy",
-        "--completion-style=detailed",
-        "--header-insertion=iwyu",
-        "--pch-storage=memory",
-        "--compile-commands-dir=${workspaceFolder}/build"
-    ],
-
-    "C_Cpp.intelliSenseEngine": "disabled",
-
-    "editor.formatOnSave": true,
-
-    "[cpp]": {
-        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
-    },
-
-    "[c]": {
-        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd"
-    }
-}
-```
-
----
-
-### `.vscode/tasks.json`
-
-The generated build task uses CMake:
-
-```json
-{
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "Build project",
-            "type": "shell",
-            "command": "cmake",
-            "args": [
-                "--build",
-                "${workspaceFolder}/build"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": [
-                "$gcc"
-            ]
-        }
-    ]
-}
-```
-
-You can run it from VS Code with:
-
-```text
-Terminal -> Run Build Task
-```
-
-Or with the shortcut:
-
-```text
-Ctrl + Shift + B
-```
-
----
-
-### `.vscode/launch.json`
-
-The generated debug configuration uses CodeLLDB:
-
-```json
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug C++ with CodeLLDB",
-            "program": "${workspaceFolder}/build/${workspaceFolderBasename}",
-            "args": [],
-            "cwd": "${workspaceFolder}",
-            "preLaunchTask": "Build project",
-            "terminal": "integrated"
-        }
-    ]
-}
-```
-
-Use this configuration from the VS Code Run and Debug panel:
-
-```text
-Debug C++ with CodeLLDB
-```
-
----
-
-### `.clang-format`
-
-The generated `.clang-format` file uses LLVM style with a few common adjustments:
-
-```yaml
-BasedOnStyle: LLVM
-IndentWidth: 4
-TabWidth: 4
-UseTab: Never
-ColumnLimit: 100
-BreakBeforeBraces: Attach
-AllowShortFunctionsOnASingleLine: Empty
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: false
-PointerAlignment: Left
-ReferenceAlignment: Left
-SortIncludes: true
-```
-
----
-
-### `.clang-tidy`
-
-The generated `.clang-tidy` enables useful checks for modern C++ development:
-
-```yaml
-Checks: >
-  bugprone-*,
-  clang-analyzer-*,
-  cppcoreguidelines-*,
-  modernize-*,
-  performance-*,
-  readability-*,
-  -cppcoreguidelines-avoid-magic-numbers,
-  -readability-magic-numbers,
-  -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -cppcoreguidelines-pro-type-reinterpret-cast
-
-WarningsAsErrors: ''
-
-HeaderFilterRegex: '.*'
-
-FormatStyle: file
-```
-
----
-
-## Building the Project Manually
-
-You can build the generated project from the terminal.
-
-Go into the project directory:
+Create a C++ project with vcpkg support:
 
 ```bash
-cd MyProject
+newcpp MyProject --vcpkg
 ```
 
-Configure the project:
+Show help:
+
+```bash
+newcpp --help
+```
+
+---
+
+## Regular project
+
+A regular project uses CMake directly without vcpkg.
+
+Build manually:
 
 ```bash
 cmake -S . -B build -G Ninja \
@@ -429,171 +167,314 @@ cmake -S . -B build -G Ninja \
   -DCMAKE_CXX_COMPILER=clang++ \
   -DCMAKE_BUILD_TYPE=Debug \
   -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-```
 
-Build it:
-
-```bash
 cmake --build build
 ```
 
----
-
-## Running the Project
-
-After building, run the executable:
+Run:
 
 ```bash
 ./build/MyProject
 ```
 
+In VS Code, the project can be built using the default build task.
+
+---
+
+## vcpkg support
+
+To create a project with vcpkg support, use:
+
+```bash
+newcpp MyProject --vcpkg
+```
+
+This creates:
+
+```text
+CMakePresets.json
+vcpkg.json
+```
+
+The generated `vcpkg.json` starts empty:
+
+```json
+{
+    "name": "MyProject",
+    "version-string": "0.1.0",
+    "dependencies": []
+}
+```
+
+No libraries are added automatically.
+
+The script writes the absolute path to the vcpkg CMake toolchain file into `CMakePresets.json`, so VS Code does not need to inherit the `VCPKG_ROOT` environment variable.
+
+---
+
+## vcpkg requirements
+
+Before using `--vcpkg`, make sure vcpkg is installed and `VCPKG_ROOT` is set.
+
+Example:
+
+```bash
+export VCPKG_ROOT="$HOME/dev/vcpkg"
+```
+
+The script expects this file to exist:
+
+```bash
+$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+```
+
+For permanent configuration, add the export to your shell config.
+
+For Bash:
+
+```bash
+echo 'export VCPKG_ROOT="$HOME/dev/vcpkg"' >> ~/.bashrc
+```
+
+For Zsh:
+
+```bash
+echo 'export VCPKG_ROOT="$HOME/dev/vcpkg"' >> ~/.zshrc
+```
+
+For Fish:
+
+```fish
+set -Ux VCPKG_ROOT $HOME/dev/vcpkg
+```
+
+---
+
+## Building a vcpkg project
+
+Configure:
+
+```bash
+cmake --preset debug
+```
+
+Build:
+
+```bash
+cmake --build --preset debug
+```
+
+Run:
+
+```bash
+./build/debug/MyProject
+```
+
+Release build:
+
+```bash
+cmake --preset release
+cmake --build --preset release
+```
+
+Run release build:
+
+```bash
+./build/release/MyProject
+```
+
+---
+
+## Adding dependencies with vcpkg
+
+A project generated with `--vcpkg` uses vcpkg manifest mode.
+
+Add a dependency:
+
+```bash
+vcpkg add port fmt
+```
+
+This updates `vcpkg.json`.
+
+Example:
+
+```json
+{
+    "name": "MyProject",
+    "version-string": "0.1.0",
+    "dependencies": [
+        "fmt"
+    ]
+}
+```
+
+Then update `CMakeLists.txt` manually according to the package instructions.
+
+Example for `fmt`:
+
+```cmake
+find_package(fmt CONFIG REQUIRED)
+
+target_link_libraries(MyProject PRIVATE
+    fmt::fmt
+)
+```
+
+Example `src/main.cpp`:
+
+```cpp
+#include <fmt/core.h>
+
+int main() {
+    fmt::print("Hello from {}!\n", "fmt");
+    return 0;
+}
+```
+
+Reconfigure and rebuild:
+
+```bash
+cmake --preset debug
+cmake --build --preset debug
+```
+
+Run:
+
+```bash
+./build/debug/MyProject
+```
+
 Expected output:
 
 ```text
-Hello, World!
+Hello from fmt!
 ```
 
 ---
 
-## Debugging
+## clang-tidy
 
-To debug the project in VS Code:
+The generated project includes a `.clang-tidy` configuration with these groups enabled:
 
-1. Open the generated project in VS Code.
-2. Make sure the CodeLLDB extension is installed.
-3. Open the Run and Debug panel.
-4. Select:
+- `bugprone-*`
+- `clang-analyzer-*`
+- `cppcoreguidelines-*`
+- `modernize-*`
+- `performance-*`
+- `readability-*`
+
+Some checks are disabled to make the generated project more comfortable to use:
+
+```yaml
+-modernize-use-trailing-return-type
+-cppcoreguidelines-avoid-magic-numbers
+-readability-magic-numbers
+-cppcoreguidelines-pro-bounds-pointer-arithmetic
+-cppcoreguidelines-pro-type-reinterpret-cast
+```
+
+This means clang-tidy will not suggest changing normal function declarations like this:
+
+```cpp
+int main()
+```
+
+into trailing return type style:
+
+```cpp
+auto main() -> int
+```
+
+---
+
+## clang-format
+
+The generated project uses an LLVM-based `.clang-format` configuration with 4-space indentation and a 100-character column limit.
+
+Formatting on save is enabled in VS Code.
+
+---
+
+## VS Code behavior
+
+When the project is opened in VS Code:
+
+- CMake Tools configures the project automatically
+- clangd uses the generated compile commands
+- CodeLLDB can debug the executable
+- The default build task builds the project
+
+For vcpkg projects, VS Code uses `CMakePresets.json`.
+
+For regular projects, VS Code uses direct CMake settings from `.vscode/settings.json`.
+
+---
+
+## Troubleshooting
+
+### `VCPKG_ROOT is not set`
+
+Set the environment variable before running the script:
+
+```bash
+export VCPKG_ROOT="$HOME/dev/vcpkg"
+```
+
+Then create the project again:
+
+```bash
+newcpp MyProject --vcpkg
+```
+
+### `Could not find toolchain file`
+
+Check that this file exists:
+
+```bash
+ls "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+```
+
+If it does not exist, your `VCPKG_ROOT` points to the wrong directory.
+
+### `CMake was unable to find a build program corresponding to Ninja`
+
+Install Ninja:
+
+```bash
+sudo pacman -S ninja
+```
+
+Check that it works:
+
+```bash
+ninja --version
+```
+
+### VS Code still uses old CMake settings
+
+Delete the build directory:
+
+```bash
+rm -rf build
+```
+
+Then in VS Code run:
 
 ```text
-Debug C++ with CodeLLDB
+CMake: Delete Cache and Reconfigure
 ```
 
-5. Press `F5`.
-
-The project will be built before debugging because the debug configuration uses:
-
-```json
-"preLaunchTask": "Build project"
-```
-
----
-
-## clangd and `compile_commands.json`
-
-clangd needs `compile_commands.json` to understand the project correctly.
-
-This file contains the real compiler commands used by CMake, including:
-
-- include paths
-- compiler flags
-- C++ standard
-- defines
-- source files
-
-The generated project enables this automatically:
-
-```cmake
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-```
-
-and also through VS Code CMake settings:
-
-```json
-"CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
-```
-
-After configuring the project, the file should exist here:
-
-```text
-build/compile_commands.json
-```
-
-If clangd does not work correctly, check that the file exists:
+Or configure manually:
 
 ```bash
-ls build/compile_commands.json
+cmake --preset debug
 ```
-
-If it does not exist, configure the project again:
-
-```bash
-cmake -S . -B build -G Ninja \
-  -DCMAKE_C_COMPILER=clang \
-  -DCMAKE_CXX_COMPILER=clang++ \
-  -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-```
-
-Then restart clangd in VS Code:
-
-```text
-Ctrl + Shift + P -> clangd: Restart language server
-```
-
----
-
-## Formatting
-
-The project supports automatic formatting on save through clangd and `.clang-format`.
-
-You can also format manually:
-
-```bash
-clang-format -i src/main.cpp
-```
-
-To check formatting without modifying the file:
-
-```bash
-clang-format --dry-run --Werror src/main.cpp
-```
-
----
-
-## Static Analysis
-
-clang-tidy diagnostics are enabled through clangd.
-
-You can also run clang-tidy manually:
-
-```bash
-clang-tidy src/main.cpp -p build
-```
-
-The `-p build` option tells clang-tidy where to find `compile_commands.json`.
 
 ---
 
 ## Notes
 
-This script is designed for Linux.
+The script does not generate a `README.md` inside newly created C++ projects.
 
-Unlike Windows, Linux executables usually do not use the `.exe` extension. That is why the generated debug configuration uses:
-
-```json
-"program": "${workspaceFolder}/build/${workspaceFolderBasename}"
-```
-
-instead of:
-
-```json
-"program": "${workspaceFolder}/build/${workspaceFolderBasename}.exe"
-```
-
----
-
-## Uninstall
-
-To remove the command, delete the script:
-
-```bash
-rm ~/.local/bin/newcpp
-```
-
-If you added `~/.local/bin` to your shell configuration only for this script, you can also remove that line from:
-
-- `~/.bashrc`
-- `~/.zshrc`
-- `~/.config/fish/config.fish`
-
-depending on your shell.
+This is intentional: generated projects stay minimal and contain only build, editor, formatting, linting, and optional dependency-management configuration.
