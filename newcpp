@@ -4,6 +4,7 @@ set -e
 
 PROJECT_NAME=""
 USE_VCPKG=false
+VCPKG_TOOLCHAIN_FILE=""
 
 # ==========================================
 # 0. ARGUMENTS
@@ -75,10 +76,12 @@ if [ "$USE_VCPKG" = true ]; then
         exit 1
     fi
 
-    if [ ! -f "$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" ]; then
+    VCPKG_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+
+    if [ ! -f "$VCPKG_TOOLCHAIN_FILE" ]; then
         echo "❌ Error: vcpkg toolchain file was not found."
         echo "Expected:"
-        echo "  $VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+        echo "  $VCPKG_TOOLCHAIN_FILE"
         exit 1
     fi
 fi
@@ -150,7 +153,7 @@ EOF
 # ==========================================
 
 if [ "$USE_VCPKG" = true ]; then
-    cat > "$TARGET_DIR/CMakePresets.json" <<'EOF'
+    cat > "$TARGET_DIR/CMakePresets.json" <<EOF
 {
     "version": 6,
     "configurePresets": [
@@ -159,13 +162,13 @@ if [ "$USE_VCPKG" = true ]; then
             "displayName": "Debug",
             "description": "Debug build using Ninja, Clang and vcpkg",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build/debug",
+            "binaryDir": "\${sourceDir}/build/debug",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Debug",
                 "CMAKE_C_COMPILER": "clang",
                 "CMAKE_CXX_COMPILER": "clang++",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+                "CMAKE_TOOLCHAIN_FILE": "$VCPKG_TOOLCHAIN_FILE"
             }
         },
         {
@@ -173,13 +176,13 @@ if [ "$USE_VCPKG" = true ]; then
             "displayName": "Release",
             "description": "Release build using Ninja, Clang and vcpkg",
             "generator": "Ninja",
-            "binaryDir": "${sourceDir}/build/release",
+            "binaryDir": "\${sourceDir}/build/release",
             "cacheVariables": {
                 "CMAKE_BUILD_TYPE": "Release",
                 "CMAKE_C_COMPILER": "clang",
                 "CMAKE_CXX_COMPILER": "clang++",
                 "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
-                "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+                "CMAKE_TOOLCHAIN_FILE": "$VCPKG_TOOLCHAIN_FILE"
             }
         }
     ],
